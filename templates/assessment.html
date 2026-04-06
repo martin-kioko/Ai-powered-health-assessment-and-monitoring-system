@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+{% block title %}New Assessment — ClinicalAI{% endblock %}
+
+{% block head_extra %}
+<style>
+  :root {
+    --sidebar-w: 280px;
+    --header-h:  58px;
+  }
+
+  .main-content,
+  .page-content,
+  .content-wrapper,
+  main {
+    padding-top: var(--header-h) !important;
+  }
+
+  /* ─── FIXED HEADER ───────────────────────────────────────────── */
+  .dash-header {
+    position: fixed;
+    top: 0; left: var(--sidebar-w); right: 0;
+    height: var(--header-h);
+    z-index: 500;
+    background: #0f2952;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 2px 20px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 28px;
+    box-sizing: border-box;
+  }
+
+  .dash-header-nav {
+    display: flex; align-items: center; gap: 2px;
+    list-style: none; margin: 0; padding: 0;
+  }
+
+  .dash-header-nav a {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 7px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,.60); text-decoration: none;
+    white-space: nowrap; transition: color .18s, background .18s;
+  }
+  .dash-header-nav a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: .65; transition: opacity .18s; }
+  .dash-header-nav a:hover     { color: #fff; background: rgba(255,255,255,.09); }
+  .dash-header-nav a:hover svg { opacity: 1; }
+  .dash-header-nav a.active    { color: #fff; background: rgba(255,255,255,.11); border: 1px solid rgba(255,255,255,.13); }
+
+  .dash-header-nav .nav-signout {
+    color: rgba(255,255,255,.42);
+    border: 1px solid rgba(255,255,255,.09);
+    margin-left: 8px;
+  }
+  .dash-header-nav .nav-signout:hover { color: #fca5a5; background: rgba(220,38,38,.14); border-color: rgba(220,38,38,.28); }
+  .dash-header-nav .nav-signout:hover svg { opacity: 1; }
+
+  .dash-nav-divider { width: 1px; height: 20px; background: rgba(255,255,255,.12); margin: 0 6px; }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 0px; }
+    .dash-header { left: 0; }
+  }
+  @media (max-width: 640px) {
+    .dash-header { padding: 0 12px; }
+    .dash-header-nav a span { display: none; }
+    .dash-header-nav a { padding: 7px 9px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══════════ FIXED HEADER ══════════ -->
+<header class="dash-header">
+  <nav>
+    <ul class="dash-header-nav">
+
+      <!-- Home -->
+      <li>
+        <a href="{{ url_for('patient.dashboard') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Home</span>
+        </a>
+      </li>
+
+      <!-- My Dashboard -->
+      <li>
+        <a href="{{ url_for('patient.dashboard') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3"  y="3"  width="7" height="7"/>
+            <rect x="14" y="3"  width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3"  y="14" width="7" height="7"/>
+          </svg>
+          <span>My Dashboard</span>
+        </a>
+      </li>
+
+      <div class="dash-nav-divider"></div>
+
+      <!-- Sign out -->
+      <li>
+        <a href="{{ url_for('auth.logout') }}" class="nav-signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign out</span>
+        </a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-top:20px">
+  <div>
+    <h1 class="page-title">New Assessment</h1>
+    <p class="page-sub">Enter your current vital signs accurately. Your result will be queued for physician review.</p>
+  </div>
+  <a href="{{ url_for('patient.dashboard') }}" class="btn btn-ghost btn-sm">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Dashboard
+  </a>
+</div>
+
+{% if not result %}
+
+{% for e in errors %}
+  <div class="error-box">{{ e }}</div>
+{% endfor %}
+
+{% if warnings %}
+  <div class="warning-box">
+    <strong style="display:block;margin-bottom:4px">Clinical warnings — verify these readings</strong>
+    {% for w in warnings %}
+      <div style="margin-top:2px">{{ w }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="card">
+  <details>
+    <summary>How to measure your vitals accurately</summary>
+    <div class="details-body">
+      <strong>Respiratory rate</strong> — Count chest rises for 60 seconds (normal: 12–20/min)<br>
+      <strong>SpO₂</strong> — Pulse oximeter fingertip clip (normal: 95–100%)<br>
+      <strong>Systolic BP</strong> — Top number on blood pressure monitor (normal: 90–120 mmHg)<br>
+      <strong>Heart rate</strong> — Pulse oximeter or wrist pulse for 60 s (normal: 60–100 bpm)<br>
+      <strong>Temperature</strong> — Oral thermometer in °C (normal: 36.0–37.5 °C)<br>
+      <strong>ACVPU</strong> — A = Alert · C = Confused · V = Voice only · P = Pain only · U = Unresponsive
+    </div>
+  </details>
+</div>
+
+<style>
+  /* ── Faded placeholder style ── */
+  .form-control::placeholder { color: #b0bec5; font-style: italic; }
+  .form-control:placeholder-shown { color: #b0bec5; }
+
+  /* ── Validation states ── */
+  .form-control.v-error   { border-color: #dc2626 !important; background: #fef2f2 !important; }
+
+  /* ── Inline feedback message ── */
+  .vital-feedback {
+    font-size: 11.5px;
+    margin-top: 5px;
+    min-height: 16px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    transition: opacity .2s;
+  }
+  .vital-feedback.err  { color: #dc2626; }
+  .vital-feedback svg  { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* ── Normal range hint below label ── */
+  .range-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+
+<form method="POST" action="{{ url_for('patient.assessment') }}" id="vitalsForm" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+  <!-- ── Respiratory & oxygen ── -->
+  <div class="vitals-section">
+    <div class="vitals-section-label">Respiratory &amp; oxygen</div>
+    <div class="vitals-grid">
+
+      <div class="form-group">
+        <label class="form-label">Respiratory rate (breaths/min)</label>
+        <div class="range-hint">Acceptable: 1 – 60 breaths/min</div>
+        <input type="number" name="respiratory_rate" id="respiratory_rate"
+               class="form-control" placeholder="e.g. 18"
+               min="1" max="60" step="1" required
+               data-normal-min="12" data-normal-max="20"
+               data-abs-min="1"    data-abs-max="60"
+               data-label="Respiratory rate">
+        <div class="vital-feedback" id="fb-respiratory_rate"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Oxygen saturation — SpO₂ (%)</label>
+        <div class="range-hint">Acceptable: 50 – 100%</div>
+        <input type="number" name="oxygen_saturation" id="oxygen_saturation"
+               class="form-control" placeholder="e.g. 98"
+               min="50" max="100" step="1" required
+               data-normal-min="95" data-normal-max="100"
+               data-abs-min="50"    data-abs-max="100"
+               data-label="SpO₂">
+        <div class="vital-feedback" id="fb-oxygen_saturation"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">O₂ measurement scale</label>
+        <div class="range-hint">Choose based on patient profile</div>
+        <select name="o2_scale" class="form-control">
+          <option value="1">Scale 1 — Standard</option>
+          <option value="2">Scale 2 — COPD / hypercapnic</option>
+        </select>
+      </div>
+
+    </div>
+    <div class="form-check" style="margin-top:8px">
+      <input type="checkbox" name="on_oxygen" id="onOxygen">
+      <label for="onOxygen">Currently using supplemental oxygen (nasal cannula, mask, etc.)</label>
+    </div>
+  </div>
+
+  <!-- ── Cardiovascular ── -->
+  <div class="vitals-section">
+    <div class="vitals-section-label">Cardiovascular</div>
+    <div class="vitals-grid-2">
+
+      <div class="form-group">
+        <label class="form-label">Systolic blood pressure (mmHg)</label>
+        <div class="range-hint">Acceptable: 50 – 250 mmHg</div>
+        <input type="number" name="systolic_bp" id="systolic_bp"
+               class="form-control" placeholder="e.g. 120"
+               min="50" max="250" step="1" required
+               data-normal-min="90" data-normal-max="120"
+               data-abs-min="50"    data-abs-max="250"
+               data-label="Systolic BP">
+        <div class="vital-feedback" id="fb-systolic_bp"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Heart rate (bpm)</label>
+        <div class="range-hint">Acceptable: 20 – 200 bpm</div>
+        <input type="number" name="heart_rate" id="heart_rate"
+               class="form-control" placeholder="e.g. 75"
+               min="20" max="200" step="1" required
+               data-normal-min="60" data-normal-max="100"
+               data-abs-min="20"    data-abs-max="200"
+               data-label="Heart rate">
+        <div class="vital-feedback" id="fb-heart_rate"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Temperature & consciousness ── -->
+  <div class="vitals-section">
+    <div class="vitals-section-label">Temperature &amp; consciousness</div>
+    <div class="vitals-grid-2">
+
+      <div class="form-group">
+        <label class="form-label">Body temperature (°C)</label>
+        <div class="range-hint">Acceptable: 30.0 – 44.0 °C</div>
+        <input type="number" name="temperature" id="temperature"
+               class="form-control" placeholder="e.g. 37.0"
+               min="30" max="44" step="0.1" required
+               data-normal-min="36.0" data-normal-max="37.5"
+               data-abs-min="30"      data-abs-max="44"
+               data-label="Temperature">
+        <div class="vital-feedback" id="fb-temperature"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Level of consciousness (ACVPU)</label>
+        <div class="range-hint">Select the most accurate description</div>
+        <select name="consciousness" class="form-control">
+          <option value="" disabled selected style="color:#b0bec5">— Select level —</option>
+          <option value="A">A — Alert: fully awake and oriented</option>
+          <option value="C">C — Confused: awake but disoriented</option>
+          <option value="V">V — Voice: responds only to voice</option>
+          <option value="P">P — Pain: responds only to painful stimulus</option>
+          <option value="U">U — Unresponsive</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="info-callout" style="margin-bottom:16px">
+    By submitting you confirm all readings are accurate. This assessment will be forwarded to your clinician for mandatory review.
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="padding:10px 28px;font-size:14px">
+    Submit assessment
+  </button>
+</form>
+
+<script>
+(function () {
+  var ICON_ERR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
+  var vitalIds = ['respiratory_rate', 'oxygen_saturation', 'systolic_bp', 'heart_rate', 'temperature'];
+
+  vitalIds.forEach(function (id) {
+    var input  = document.getElementById(id);
+    if (!input) return;
+
+    var fb     = document.getElementById('fb-' + id);
+    var absMin = parseFloat(input.dataset.absMin);
+    var absMax = parseFloat(input.dataset.absMax);
+    var label  = input.dataset.label;
+
+    function validate() {
+      var raw = input.value.trim();
+
+      /* Empty — clear */
+      if (raw === '') {
+        input.classList.remove('v-ok', 'v-error');
+        fb.className = 'vital-feedback';
+        fb.innerHTML = '';
+        return;
+      }
+
+      var val = parseFloat(raw);
+
+      /* Outside acceptable range — hard block */
+      if (isNaN(val) || val < absMin || val > absMax) {
+        input.classList.remove('v-ok');
+        input.classList.add('v-error');
+        fb.className = 'vital-feedback err';
+        fb.innerHTML = ICON_ERR + ' ' + label + ' must be between ' + absMin + ' and ' + absMax + '. Please correct this value to continue.';
+        return;
+      }
+
+      /* Within acceptable range — silent, just remove error border */
+      input.classList.remove('v-error');
+      input.classList.remove('v-ok');
+      fb.className = 'vital-feedback';
+      fb.innerHTML = '';
+    }
+
+    input.addEventListener('blur', validate);
+    /* Re-validate immediately while typing only when already in error */
+    input.addEventListener('input', function () {
+      if (input.classList.contains('v-error')) validate();
+    });
+  });
+
+  /* Block submit if any field has a hard error or is empty */
+  document.getElementById('vitalsForm').addEventListener('submit', function (e) {
+    var hasError = false;
+
+    vitalIds.forEach(function (id) {
+      var input = document.getElementById(id);
+      if (!input) return;
+
+      var fb = document.getElementById('fb-' + id);
+
+      if (input.value.trim() === '') {
+        input.classList.add('v-error');
+        fb.className = 'vital-feedback err';
+        fb.innerHTML = ICON_ERR + ' ' + (input.dataset.label || id) + ' is required.';
+        hasError = true;
+      } else if (input.classList.contains('v-error')) {
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      e.preventDefault();
+      var firstErr = document.querySelector('.form-control.v-error');
+      if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+})();
+</script>
+
+{% else %}
+
+<style>
+  /* ── Risk result card ── */
+  .result-risk-card {
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+  }
+  .result-risk-card.High   { background: #fef2f2; border-color: #fecaca; }
+  .result-risk-card.Medium { background: #fffbeb; border-color: #fde68a; }
+  .result-risk-card.Low    { background: #f0fdf4; border-color: #bbf7d0; }
+
+  .result-risk-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .result-risk-card.High   .result-risk-icon { background: #fee2e2; }
+  .result-risk-card.Medium .result-risk-icon { background: #fef3c7; }
+  .result-risk-card.Low    .result-risk-icon { background: #dcfce7; }
+
+  .result-risk-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; margin-bottom: 4px;
+  }
+  .result-risk-card.High   .result-risk-label { color: #dc2626; }
+  .result-risk-card.Medium .result-risk-label { color: #d97706; }
+  .result-risk-card.Low    .result-risk-label { color: #16a34a; }
+
+  .result-risk-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .result-risk-rec   { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+  /* ── Donut chart card ── */
+  .donut-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    box-shadow: var(--shadow-sm);
+  }
+  .donut-wrap {
+    position: relative;
+    width: 160px; height: 160px;
+    flex-shrink: 0;
+  }
+  .donut-wrap canvas { width: 160px !important; height: 160px !important; }
+  .donut-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-center-pct  { font-size: 22px; font-weight: 800; color: var(--navy); line-height: 1; }
+  .donut-center-lbl  { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  /* legend */
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .donut-legend-row { display: flex; align-items: center; gap: 10px; }
+  .donut-legend-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  }
+  .donut-legend-dot.Low    { background: #16a34a; }
+  .donut-legend-dot.Medium { background: #d97706; }
+  .donut-legend-dot.High   { background: #dc2626; }
+  .donut-legend-name { font-size: 13px; font-weight: 600; color: var(--navy); flex: 1; }
+  .donut-legend-pct  {
+    font-size: 13px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim); font-weight: 700;
+  }
+  .donut-legend-row.active .donut-legend-name { color: var(--accent); }
+  .donut-legend-row.active .donut-legend-pct  { color: var(--navy); }
+
+  @media (max-width: 600px) {
+    .donut-card { flex-direction: column; align-items: center; }
+    .donut-legend { width: 100%; }
+  }
+</style>
+
+<!-- ── Risk result card ── -->
+<div class="result-risk-card {{ result.final_risk }}">
+  <div class="result-risk-icon">
+    {% if result.final_risk == 'High' %}⚠️
+    {% elif result.final_risk == 'Medium' %}🟡
+    {% else %}✅{% endif %}
+  </div>
+  <div>
+    <div class="result-risk-label">Assessment result</div>
+    <div class="result-risk-title">
+      {% if result.final_risk == 'High' %}High Risk — Seek urgent attention
+      {% elif result.final_risk == 'Medium' %}Medium Risk — Contact your care team
+      {% else %}Low Risk — Continue routine monitoring{% endif %}
+    </div>
+    <div class="result-risk-rec">{{ result.recommendation }}</div>
+  </div>
+</div>
+
+<!-- ── Donut chart: risk breakdown ── -->
+{% if result.ml_class_probs %}
+
+{#
+  ml_class_probs order from the backend: [High, Low, Medium]
+  Using round(1) — 1 decimal place — so small probabilities like
+  0.3% are shown instead of being collapsed to 0% by integer rounding.
+  No fabrication: these are the raw model outputs.
+#}
+{% set high_pct   = (result.ml_class_probs[0] * 100) | round(1) %}
+{% set low_pct    = (result.ml_class_probs[1] * 100) | round(1) %}
+{% set medium_pct = (result.ml_class_probs[2] * 100) | round(1) %}
+
+{# Centre label shows the dominant class probability #}
+{% if result.final_risk == 'High' %}
+  {% set dom_pct = high_pct %}
+{% elif result.final_risk == 'Low' %}
+  {% set dom_pct = low_pct %}
+{% else %}
+  {% set dom_pct = medium_pct %}
+{% endif %}
+
+<div class="donut-card">
+  <div class="donut-wrap">
+    <canvas id="donutChart"></canvas>
+    <div class="donut-center">
+      <div class="donut-center-pct">{{ dom_pct }}%</div>
+      <div class="donut-center-lbl">{{ result.final_risk }}</div>
+    </div>
+  </div>
+
+  <div class="donut-legend">
+    <div class="card-title" style="margin-bottom:6px;font-size:14px">Risk breakdown</div>
+
+    <div class="donut-legend-row {% if result.final_risk=='Low' %}active{% endif %}">
+      <span class="donut-legend-dot Low"></span>
+      <span class="donut-legend-name">Low</span>
+      <span class="donut-legend-pct">{{ low_pct }}%</span>
+    </div>
+    <div class="donut-legend-row {% if result.final_risk=='Medium' %}active{% endif %}">
+      <span class="donut-legend-dot Medium"></span>
+      <span class="donut-legend-name">Medium</span>
+      <span class="donut-legend-pct">{{ medium_pct }}%</span>
+    </div>
+    <div class="donut-legend-row {% if result.final_risk=='High' %}active{% endif %}">
+      <span class="donut-legend-dot High"></span>
+      <span class="donut-legend-name">High</span>
+      <span class="donut-legend-pct">{{ high_pct }}%</span>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<div class="info-callout" style="margin-bottom:16px">
+  Assessment #{{ result.assessment_id }} saved and forwarded to your clinician for review.
+</div>
+
+<div style="display:flex;gap:10px">
+  <a href="{{ url_for('patient.dashboard') }}" class="btn btn-primary">View dashboard</a>
+  <a href="{{ url_for('patient.assessment') }}" class="btn btn-ghost">New assessment</a>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block scripts %}
+
+{% if result and result.ml_class_probs %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  /*
+    ml_class_probs from the backend: [High, Low, Medium]
+    Using toFixed(1) — 1 decimal place — so tiny probabilities
+    still appear as visible slices rather than collapsing to 0.
+    No fabrication: these are the raw model outputs.
+  */
+  var probs     = {{ result.ml_class_probs | tojson }};
+  var highPct   = parseFloat((probs[0] * 100).toFixed(1));
+  var lowPct    = parseFloat((probs[1] * 100).toFixed(1));
+  var mediumPct = parseFloat((probs[2] * 100).toFixed(1));
+
+  var colours = {
+    Low:    '#16a34a',
+    Medium: '#d97706',
+    High:   '#dc2626',
+  };
+
+  var ctx = document.getElementById('donutChart');
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Low', 'Medium', 'High'],
+      datasets: [{
+        data: [lowPct, mediumPct, highPct],
+        backgroundColor: [colours.Low, colours.Medium, colours.High],
+        borderColor: ['#f0fdf4', '#fffbeb', '#fef2f2'],
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      animation: { animateRotate: true, duration: 700 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            /* Show 1 decimal place in tooltip as well */
+            label: function(c){ return ' ' + c.label + ': ' + c.parsed.toFixed(1) + '%'; }
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
+{# ── Golden sidebar — first section only, same as doctor dashboard ── #}
+<script>
+(function(){
+  function styleSidebar(){
+    var sb = document.querySelector('.sidebar,aside,[class*="sidebar"],nav.side,#sidebar');
+    if(!sb) return;
+    var first = sb.firstElementChild;
+    if(first){
+      first.style.setProperty('background','#eab308','important');
+      first.style.setProperty('border-bottom','2px solid #ca8a04','important');
+      first.style.setProperty('box-shadow','0 3px 10px rgba(202,138,4,.40)','important');
+      first.querySelectorAll('*').forEach(function(el){
+        el.style.setProperty('color','#1e3a5f','important');
+      });
+    }
+  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', styleSidebar)
+    : styleSidebar();
+})();
+</script>
+{% endblock %}

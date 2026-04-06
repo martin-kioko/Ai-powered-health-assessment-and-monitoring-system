@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ClinicalAI{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     GLOBAL LAYOUT FIXES
+  ═══════════════════════════════════════════════════════════════ */
+
+  :root {
+    --sidebar-w: 280px;
+    --header-h:  58px;
+  }
+
+  .main-content,
+  .page-content,
+  .content-wrapper,
+  main {
+    padding-top: var(--header-h) !important;
+  }
+
+  /* ─── FIXED HEADER ───────────────────────────────────────────── */
+  .dash-header {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    height: var(--header-h);
+    z-index: 500;
+    background: #0f2952;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 2px 20px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 28px;
+    box-sizing: border-box;
+  }
+
+  /* ─── HEADER NAV ─────────────────────────────────────────────── */
+  .dash-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dash-header-nav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,.60);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color .18s, background .18s;
+  }
+  .dash-header-nav a svg {
+    width: 14px; height: 14px; flex-shrink: 0;
+    opacity: .65; transition: opacity .18s;
+  }
+  .dash-header-nav a:hover     { color: #fff; background: rgba(255,255,255,.09); }
+  .dash-header-nav a:hover svg { opacity: 1; }
+  .dash-header-nav a.active    {
+    color: #fff;
+    background: rgba(255,255,255,.11);
+    border: 1px solid rgba(255,255,255,.13);
+  }
+
+  .dash-header-nav .nav-new {
+    color: #93c5fd;
+    border: 1px solid rgba(147,197,253,.22);
+  }
+  .dash-header-nav .nav-new:hover {
+    color: #fff;
+    background: rgba(37,99,235,.28);
+    border-color: rgba(147,197,253,.5);
+  }
+
+  .dash-header-nav .nav-signout {
+    color: rgba(255,255,255,.42);
+    border: 1px solid rgba(255,255,255,.09);
+    margin-left: 8px;
+  }
+  .dash-header-nav .nav-signout:hover {
+    color: #fca5a5;
+    background: rgba(220,38,38,.14);
+    border-color: rgba(220,38,38,.28);
+  }
+  .dash-header-nav .nav-signout:hover svg { opacity: 1; }
+
+  .dash-nav-divider {
+    width: 1px; height: 20px;
+    background: rgba(255,255,255,.12);
+    margin: 0 6px; flex-shrink: 0;
+  }
+
+  /* ─── SIDEBAR OVERRIDES ──────────────────────────────────────── */
+  .sidebar a[href*="dashboard"],
+  .sidebar a[href*="assessment"],
+  aside a[href*="dashboard"],
+  aside a[href*="assessment"],
+  [class*="sidebar"] a[href*="dashboard"],
+  [class*="sidebar"] a[href*="assessment"] {
+    display: none !important;
+  }
+
+  /* ─── PATIENT CHIPS ─────────────────────────────────────────── */
+  .sidebar-patient-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    padding-left: 0;
+  }
+  .sidebar-patient-chip {
+    font-size: 11px;
+    color: rgba(255,255,255,.90);
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .sidebar-patient-condition {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fde68a;
+    background: rgba(234,179,8,.18);
+    border: 1px solid rgba(234,179,8,.35);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: .2px;
+    white-space: nowrap;
+  }
+
+  /* ─── PHYSICIAN REVIEW ───────────────────────────────────────── */
+  .physician-review-section {
+    margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;
+  }
+  .physician-review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .physician-review-icon {
+    width: 28px; height: 28px; background: var(--accent-muted);
+    border: 1px solid var(--accent-border); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .physician-review-icon svg { width: 14px; height: 14px; color: var(--accent); }
+  .physician-review-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--navy);
+  }
+  .physician-review-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 4px;
+  }
+  .physician-review-badge.reviewed { background: var(--low-bg);    color: var(--low);    border: 1px solid var(--low-border); }
+  .physician-review-badge.pending  { background: var(--medium-bg); color: var(--medium); border: 1px solid var(--medium-border); }
+
+  .physician-note-card {
+    background: linear-gradient(135deg,#eff6ff 0%,#f8fafc 100%);
+    border: 1px solid #bfdbfe; border-left: 4px solid var(--accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 14px 16px; margin-bottom: 10px;
+  }
+  .physician-note-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .physician-avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .physician-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .physician-date { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono',monospace; margin-top: 1px; }
+  .physician-note-text {
+    font-size: 13px; color: var(--text-muted); line-height: 1.7; font-style: italic; padding-left: 40px;
+  }
+  .awaiting-review-box {
+    background: var(--medium-bg); border: 1px dashed var(--medium-border);
+    border-radius: var(--radius-md); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .awaiting-review-box svg { width: 18px; height: 18px; color: var(--medium); flex-shrink: 0; }
+  .awaiting-review-text { font-size: 13px; color: var(--medium); font-weight: 500; }
+  .awaiting-review-sub  { font-size: 11px; color: var(--medium); opacity: .7; margin-top: 2px; }
+
+  /* ─── HISTORY TABLE ──────────────────────────────────────────── */
+  .history-row { cursor: pointer; }
+  .history-row:hover td { background: #eff6ff !important; }
+  .history-detail-row { display: none; }
+  .history-detail-row.open { display: table-row; }
+  .history-detail-cell { padding: 0 !important; border-bottom: 2px solid var(--accent-border) !important; }
+  .history-detail-inner {
+    padding: 16px 20px;
+    background: linear-gradient(135deg,#f8fafc 0%,#eff6ff 100%);
+    border-left: 3px solid var(--accent);
+  }
+  .history-vitals-grid {
+    display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; margin-bottom: 12px;
+  }
+  .history-vital-chip {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 10px; text-align: center;
+  }
+  .history-vital-val {
+    font-family: 'JetBrains Mono',monospace; font-size: 15px;
+    font-weight: 700; color: var(--navy); line-height: 1.2;
+  }
+  .history-vital-lbl {
+    font-size: 9px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: .4px; margin-top: 2px;
+  }
+  .history-rec {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px;
+    font-size: 12px; color: var(--text-muted); line-height: 1.6;
+  }
+  .history-rec-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--navy); margin-bottom: 4px;
+  }
+  .history-toggle-icon {
+    font-size: 10px; color: var(--text-dim); transition: transform .15s; display: inline-block;
+  }
+  .o2-badge {
+    display: inline-block; font-size: 9px; font-weight: 600; padding: 1px 5px;
+    border-radius: 3px; background: var(--accent-muted); color: var(--accent);
+    border: 1px solid var(--accent-border); font-family: 'JetBrains Mono',monospace; margin-left: 3px;
+  }
+
+  /* ─── FLUSH FOOTER ───────────────────────────────────────────── */
+  .dash-footer {
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    height: 36px;
+    background: #0f2952;
+    border-top: 1px solid rgba(255,255,255,.08);
+    box-sizing: border-box;
+    z-index: 500;
+  }
+  .dash-footer-spacer { height: 52px; }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 0px; }
+    .dash-header { left: 0; }
+    .dash-footer  { left: 0; }
+  }
+  @media (max-width: 640px) {
+    .dash-header { padding: 0 12px; }
+    .dash-header-nav a span { display: none; }
+    .dash-header-nav a { padding: 7px 9px; }
+    .history-vitals-grid { grid-template-columns: repeat(3,1fr); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══════════ FIXED HEADER ══════════ -->
+<header class="dash-header">
+  <nav>
+    <ul class="dash-header-nav">
+
+      <!-- My Dashboard -->
+      <li>
+        <a href="{{ url_for('patient.dashboard') }}" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3"  y="3"  width="7" height="7"/>
+            <rect x="14" y="3"  width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3"  y="14" width="7" height="7"/>
+          </svg>
+          <span>My Dashboard</span>
+        </a>
+      </li>
+
+      <!-- Home -->
+      <li>
+        <a href="{{ url_for('auth.logout') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Home</span>
+        </a>
+      </li>
+
+      <!-- New Assessment -->
+      <li>
+        <a href="{{ url_for('patient.assessment') }}" class="nav-new">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5"  y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>New Assessment</span>
+        </a>
+      </li>
+
+      <div class="dash-nav-divider"></div>
+
+      <!-- Sign out -->
+      <li>
+        <a href="{{ url_for('auth.logout') }}" class="nav-signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign out</span>
+        </a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+<!-- ════════════════════════════════ -->
+
+
+<!-- ── STAT CARDS ── -->
+<div class="stat-grid" style="margin-top:20px">
+  <div class="stat-card accent-blue">
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-label">Total assessments</div>
+  </div>
+  <div class="stat-card accent-muted">
+    <div class="stat-value">{{ pending }}</div>
+    <div class="stat-label">Awaiting review</div>
+  </div>
+  <div class="stat-card accent-low">
+    <div class="stat-value">{{ risk_counts.Low }}</div>
+    <div class="stat-label">Low risk</div>
+  </div>
+  <div class="stat-card accent-medium">
+    <div class="stat-value">{{ risk_counts.Medium }}</div>
+    <div class="stat-label">Medium risk</div>
+  </div>
+  <div class="stat-card accent-high">
+    <div class="stat-value">{{ risk_counts.High }}</div>
+    <div class="stat-label">High risk</div>
+  </div>
+</div>
+
+
+{% if latest %}
+
+<div class="grid-2" style="align-items:start">
+
+  <!-- ── LATEST ASSESSMENT CARD ── -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Latest assessment</div>
+        <div class="card-sub">{{ latest.created_at }}</div>
+      </div>
+      <span class="risk-badge risk-{{ latest.final_risk }}">{{ latest.final_risk }}</span>
+    </div>
+
+    <div class="risk-alert risk-alert-{{ latest.final_risk }}">
+      <div class="risk-alert-title">
+        {% if latest.final_risk == 'High' %}High risk — seek urgent attention
+        {% elif latest.final_risk == 'Medium' %}Medium risk — contact your care team
+        {% else %}Low risk — continue routine monitoring{% endif %}
+      </div>
+      <div class="risk-alert-text">{{ latest.recommendation }}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.respiratory_rate }}</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">Resp/min</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.oxygen_saturation }}%</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">SpO₂</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.systolic_bp }}</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">Sys BP</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.heart_rate }}</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">HR bpm</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.temperature }}°</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">Temp °C</div>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--navy)">{{ latest.consciousness }}</div>
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">ACVPU</div>
+      </div>
+    </div>
+
+    <!-- Physician review -->
+    <div class="physician-review-section">
+      <div class="physician-review-header">
+        <div class="physician-review-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="physician-review-label">Physician review</div>
+        {% if notes %}
+          <span class="physician-review-badge reviewed">&#10003; Reviewed</span>
+        {% else %}
+          <span class="physician-review-badge pending">Pending</span>
+        {% endif %}
+      </div>
+
+      {% if notes %}
+        {% for n in notes %}
+        <div class="physician-note-card">
+          <div class="physician-note-card-top">
+            <div class="physician-avatar">{{ n.doctor[0].upper() }}</div>
+            <div>
+              <div class="physician-name">Dr. {{ n.doctor }}</div>
+              <div class="physician-date">{{ n.date }}</div>
+            </div>
+          </div>
+          <div class="physician-note-text">"{{ n.note }}"</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="awaiting-review-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <div>
+            <div class="awaiting-review-text">Awaiting physician review</div>
+            <div class="awaiting-review-sub">A clinician will review your assessment and add their notes shortly.</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+      <a href="{{ url_for('patient.download_pdf', assessment_id=latest.id) }}" class="btn btn-ghost btn-sm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PDF report
+      </a>
+      <span style="font-size:11px;color:var(--text-dim)">#{{ latest.id }} · {{ latest.status | title }}</span>
+    </div>
+  </div>
+
+  <!-- ── CHARTS ── -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="chart-box">
+      <div class="chart-title">Vitals overview</div>
+      <div style="position:relative;height:220px">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-title">Risk trend</div>
+      <div style="position:relative;height:220px">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% if history | length > 1 %}
+<div class="card" style="margin-top:8px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Assessment history</div>
+      <div class="card-sub">Click any row to view vitals and clinical details</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Date</th><th>Risk</th><th>RR</th><th>SpO₂</th>
+          <th>Sys BP</th><th>HR</th><th>Temp</th><th>Confidence</th>
+          <th>Status</th><th>PDF</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in history %}
+        <tr class="history-row" onclick="toggleHistory({{ loop.index0 }})" id="hrow-{{ loop.index0 }}">
+          <td class="mono" style="color:var(--text-muted)">{{ a.id }}</td>
+          <td style="white-space:nowrap">{{ a.created_at }}</td>
+          <td><span class="risk-badge risk-{{ a.final_risk }}">{{ a.final_risk }}</span></td>
+          <td class="mono">{{ a.respiratory_rate }}</td>
+          <td class="mono">{{ a.oxygen_saturation }}%</td>
+          <td class="mono">{{ a.systolic_bp }}</td>
+          <td class="mono">{{ a.heart_rate }}</td>
+          <td class="mono">{{ a.temperature }}°</td>
+          <td class="mono">{{ '%.0f%%'|format(a.ml_probability*100) }}</td>
+          <td>
+            <span style="font-size:11px;font-weight:600;color:{% if a.status=='reviewed' %}var(--low){% else %}var(--medium){% endif %}">
+              {{ a.status | title }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('patient.download_pdf', assessment_id=a.id) }}"
+               class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">PDF</a>
+          </td>
+          <td style="text-align:center">
+            <span class="history-toggle-icon" id="htoggle-{{ loop.index0 }}">▾</span>
+          </td>
+        </tr>
+
+        <tr class="history-detail-row" id="hdetail-{{ loop.index0 }}">
+          <td class="history-detail-cell" colspan="12">
+            <div class="history-detail-inner">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);margin-bottom:10px">
+                Vital signs recorded
+              </div>
+              <div class="history-vitals-grid">
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.respiratory_rate }}</div>
+                  <div class="history-vital-lbl">Resp/min</div>
+                </div>
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.oxygen_saturation }}%</div>
+                  <div class="history-vital-lbl">SpO₂</div>
+                </div>
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.systolic_bp }}</div>
+                  <div class="history-vital-lbl">Sys BP</div>
+                </div>
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.heart_rate }}</div>
+                  <div class="history-vital-lbl">HR bpm</div>
+                </div>
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.temperature }}°</div>
+                  <div class="history-vital-lbl">Temp °C</div>
+                </div>
+                <div class="history-vital-chip">
+                  <div class="history-vital-val">{{ a.consciousness }}</div>
+                  <div class="history-vital-lbl">ACVPU</div>
+                </div>
+              </div>
+
+              {% if a.on_oxygen %}
+              <div style="margin-bottom:10px">
+                <span class="o2-badge">On supplemental O₂</span>
+              </div>
+              {% endif %}
+
+              <div class="history-rec">
+                <div class="history-rec-label">
+                  Risk:
+                  <span style="color:{% if a.final_risk=='High' %}var(--high){% elif a.final_risk=='Medium' %}var(--medium){% else %}var(--low){% endif %}">
+                    {{ a.final_risk }}
+                  </span>
+                  &nbsp;·&nbsp; Model: {{ a.ml_prediction }}
+                  &nbsp;·&nbsp; Confidence: {{ '%.0f%%'|format(a.ml_probability*100) }}
+                </div>
+                {{ a.recommendation }}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+    <rect x="9" y="3" width="6" height="4" rx="2"/>
+  </svg>
+  <div class="empty-state-title">No assessments yet</div>
+  <div class="empty-state-sub">Submit your first assessment to see your health dashboard.</div>
+  <a href="{{ url_for('patient.assessment') }}" class="btn btn-primary">Start assessment</a>
+</div>
+{% endif %}
+
+
+<div class="dash-footer-spacer"></div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if latest %}
+<script>
+riskTrendChart('trendChart', {{ trend_dates|safe }}, {{ trend_risks|safe }});
+radarChart('radarChart', {
+  rr:   {{ latest.respiratory_rate }},
+  spo2: {{ latest.oxygen_saturation }},
+  sbp:  {{ latest.systolic_bp }},
+  hr:   {{ latest.heart_rate }},
+  temp: {{ latest.temperature }},
+});
+
+function toggleHistory(idx) {
+  var row    = document.getElementById('hrow-'    + idx);
+  var detail = document.getElementById('hdetail-' + idx);
+  var toggle = document.getElementById('htoggle-' + idx);
+  var isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  row.classList.toggle('open', !isOpen);
+  toggle.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+</script>
+{% endif %}
+
+<script>
+(function () {
+  function modifySidebar() {
+
+    var sidebar = document.querySelector(
+      '.sidebar, aside, [class*="sidebar"], nav.side, #sidebar'
+    );
+    if (!sidebar) return;
+
+    var firstSection = sidebar.firstElementChild;
+    if (firstSection) {
+      firstSection.style.setProperty('background', '#eab308', 'important');
+      firstSection.style.setProperty('border-bottom', '2px solid #ca8a04', 'important');
+      firstSection.style.setProperty('box-shadow', '0 3px 10px rgba(202,138,4,.40)', 'important');
+      firstSection.querySelectorAll('*').forEach(function (el) {
+        el.style.setProperty('color', '#1e3a5f', 'important');
+      });
+    }
+
+    sidebar.querySelectorAll('a').forEach(function (link) {
+      var href = (link.getAttribute('href') || '').toLowerCase();
+      var text = link.textContent.trim().toLowerCase();
+      if (
+        href.indexOf('dashboard') !== -1 ||
+        href.indexOf('assessment') !== -1 ||
+        text === 'dashboard' ||
+        text === 'new assessment' ||
+        text === 'my dashboard'
+      ) {
+        var parent = link.closest('li') || link;
+        parent.style.display = 'none';
+      }
+    });
+
+    if (sidebar.querySelector('.sidebar-chips-injected')) return;
+
+    var patientGender    = {{ (pat.gender or '') | tojson }};
+    var patientAge       = {{ (pat.age | string if pat.age else '') | tojson }};
+    var patientCondition = {{ (pat.conditions or '') | tojson }};
+
+    var chipsHTML = '';
+    if (patientGender) {
+      chipsHTML += '<span class="sidebar-patient-chip">' +
+        patientGender.replace(/</g, '&lt;') + '</span>';
+    }
+    if (patientAge) {
+      chipsHTML += '<span class="sidebar-patient-chip">' +
+        patientAge.replace(/</g, '&lt;') + ' yrs</span>';
+    }
+    if (patientCondition) {
+      chipsHTML += '<span class="sidebar-patient-condition">' +
+        patientCondition.replace(/</g, '&lt;') + '</span>';
+    }
+
+    if (!chipsHTML) return;
+
+    var chipsRow = document.createElement('div');
+    chipsRow.className = 'sidebar-patient-meta sidebar-chips-injected';
+    chipsRow.innerHTML = chipsHTML;
+
+    var patientName = {{ current_user.name | tojson }};
+    var nameEl = null;
+
+    var allEls = sidebar.querySelectorAll('*');
+    for (var i = 0; i < allEls.length; i++) {
+      var el = allEls[i];
+      if (firstSection && firstSection.contains(el)) continue;
+      var directText = Array.from(el.childNodes)
+        .filter(function(n){ return n.nodeType === 3; })
+        .map(function(n){ return n.textContent.trim(); })
+        .join('');
+      if (directText && directText.indexOf(patientName.trim()) !== -1) {
+        nameEl = el;
+        break;
+      }
+    }
+
+    if (nameEl) {
+      var nameParent = nameEl.parentElement;
+      if (nameParent) {
+        var insertAfter = nameEl;
+        var sibling = nameEl.nextElementSibling;
+        if (sibling && sibling.textContent.trim().toUpperCase() === 'PATIENT') {
+          insertAfter = sibling;
+        }
+        if (insertAfter.nextSibling) {
+          nameParent.insertBefore(chipsRow, insertAfter.nextSibling);
+        } else {
+          nameParent.appendChild(chipsRow);
+        }
+      }
+    } else {
+      var secondSection = firstSection ? firstSection.nextElementSibling : null;
+      if (secondSection) {
+        secondSection.appendChild(chipsRow);
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', modifySidebar);
+  } else {
+    modifySidebar();
+  }
+})();
+</script>
+{% endblock %}

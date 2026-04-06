@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% block title %}Create Account — ClinicalAI{% endblock %}
+
+{% block head_extra %}
+<style>
+  .public-header { display: none; }
+  .public-main { padding: 0; max-width: 100%; }
+
+  .register-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .register-left {
+    background: linear-gradient(160deg, #091d3e 0%, #0f2952 55%, #1a3a6e 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .register-left-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  .register-left-glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 15% 50%, rgba(37,99,235,.22) 0%, transparent 55%),
+      radial-gradient(circle at 85% 15%, rgba(96,165,250,.12) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .register-left-topbar {
+    position: relative; z-index: 2;
+    padding: 28px 40px;
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+
+  .register-left-topbar svg { width: 22px; height: 22px; color: #60a5fa; }
+  .register-left-topbar span { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+
+  .register-left-body {
+    position: relative; z-index: 2;
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 48px 40px;
+  }
+
+  .register-left-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(37,99,235,.18);
+    border: 1px solid rgba(96,165,250,.28);
+    border-radius: 100px;
+    padding: 4px 13px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: #93c5fd; margin-bottom: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    width: fit-content;
+  }
+
+  .register-left-pill::before {
+    content: ''; width: 5px; height: 5px;
+    border-radius: 50%; background: #60a5fa;
+    animation: reg-blink 2s ease-in-out infinite;
+  }
+
+  @keyframes reg-blink {
+    0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)}
+  }
+
+  .register-left-h {
+    font-size: 34px; font-weight: 700; color: #fff;
+    line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 14px;
+  }
+
+  .register-left-h em { font-style: normal; color: #60a5fa; }
+
+  .register-left-p {
+    font-size: 14px; color: rgba(255,255,255,.55);
+    line-height: 1.75; margin-bottom: 32px; max-width: 360px;
+  }
+
+  .register-steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+
+  .register-step {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+
+  .register-step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(96,165,250,.18);
+    border: 1px solid rgba(96,165,250,.3);
+    color: #60a5fa;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .register-step-text {}
+  .register-step-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .register-step-desc { font-size: 11px; color: rgba(255,255,255,.4); line-height: 1.5; }
+
+  .register-trust {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(5,150,105,.12);
+    border: 1px solid rgba(52,211,153,.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px; color: #34d399;
+  }
+
+  .register-trust svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .register-right {
+    background: #f8fafc;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 32px;
+    overflow-y: auto;
+  }
+
+  .register-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 36px;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 4px 24px rgba(15,41,82,.10);
+    margin: auto 0;
+  }
+
+  .register-card-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 100px; padding: 3px 10px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: #059669; font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 18px;
+  }
+
+  .register-card-badge svg { width: 11px; height: 11px; }
+  .register-card-title { font-size: 22px; font-weight: 700; color: #0f2952; letter-spacing: -.4px; margin-bottom: 4px; }
+  .register-card-sub { font-size: 13px; color: #475569; margin-bottom: 24px; }
+
+  .reg-input-label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: #475569; text-transform: uppercase;
+    letter-spacing: .5px; margin-bottom: 5px;
+  }
+
+  .reg-input-wrap { position: relative; display: flex; align-items: center; margin-bottom: 4px; }
+
+  .reg-input-icon {
+    position: absolute; left: 11px;
+    width: 15px; height: 15px; color: #94a3b8; pointer-events: none;
+  }
+
+  .reg-input {
+    width: 100%; padding: 9px 12px 9px 34px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; color: #0f172a;
+    font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+
+  .reg-input:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+  .reg-input::placeholder { color: #cbd5e1; }
+
+  /* Validation states */
+  .reg-input.input-error { border-color: #dc2626 !important; background: #fff5f5; box-shadow: 0 0 0 3px rgba(220,38,38,.08) !important; }
+  .reg-input.input-ok    { border-color: #059669 !important; background: #f0fdf4; box-shadow: 0 0 0 3px rgba(5,150,105,.08) !important; }
+
+  .reg-role-select.input-error { border-color: #dc2626 !important; box-shadow: 0 0 0 3px rgba(220,38,38,.08) !important; }
+  .reg-role-select.input-ok    { border-color: #059669 !important; box-shadow: 0 0 0 3px rgba(5,150,105,.08) !important; }
+
+  .field-error {
+    font-size: 11px; color: #dc2626;
+    margin-bottom: 10px; margin-top: 2px;
+    display: flex; align-items: center; gap: 4px;
+    min-height: 16px;
+  }
+
+  .field-error svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+  /* Password strength bar */
+  .pw-strength-bar {
+    display: flex; gap: 4px; margin-top: 4px; margin-bottom: 4px;
+  }
+
+  .pw-strength-bar span {
+    flex: 1; height: 3px; border-radius: 2px;
+    background: #e2e8f0;
+    transition: background .25s;
+  }
+
+  .pw-strength-bar.s1 span:nth-child(1) { background: #dc2626; }
+  .pw-strength-bar.s2 span:nth-child(-n+2) { background: #f59e0b; }
+  .pw-strength-bar.s3 span:nth-child(-n+3) { background: #3b82f6; }
+  .pw-strength-bar.s4 span:nth-child(-n+4) { background: #059669; }
+
+  .pw-strength-label { font-size: 11px; color: #94a3b8; margin-bottom: 10px; }
+
+  .reg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .reg-section-divider {
+    border-top: 1px solid #f1f5f9;
+    margin: 18px 0 14px;
+    padding-top: 14px;
+  }
+
+  .reg-section-label {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .7px;
+    color: #94a3b8;
+  }
+
+  .reg-role-select {
+    width: 100%; padding: 9px 12px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; color: #0f172a;
+    font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none; cursor: pointer; margin-bottom: 14px;
+    transition: border-color .15s;
+  }
+
+  .reg-role-select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+
+  .reg-textarea {
+    width: 100%; padding: 9px 12px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; color: #0f172a;
+    font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none; resize: vertical; margin-bottom: 4px;
+    transition: border-color .15s;
+  }
+
+  .reg-textarea:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+  .reg-hint { font-size: 11px; color: #94a3b8; margin-bottom: 14px; }
+
+  .reg-submit {
+    width: 100%; padding: 12px;
+    background: #2563eb; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 6px;
+    box-shadow: 0 4px 12px rgba(37,99,235,.3);
+  }
+
+  .reg-submit:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.4); }
+  .reg-submit svg { width: 15px; height: 15px; }
+
+  .reg-divider {
+    display: flex; align-items: center; gap: 12px; margin: 18px 0;
+  }
+
+  .reg-divider::before, .reg-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+
+  .reg-divider span { font-size: 12px; color: #94a3b8; }
+  .reg-login-link { text-align: center; font-size: 13px; color: #475569; }
+  .reg-login-link a { color: #2563eb; font-weight: 600; text-decoration: none; }
+  .reg-login-link a:hover { text-decoration: underline; }
+
+  .reg-error {
+    background: #fef2f2; border: 1px solid #fecaca;
+    color: #dc2626; padding: 10px 14px;
+    border-radius: 8px; font-size: 13px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .reg-error svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  @media (max-width: 900px) {
+    .register-page { grid-template-columns: 1fr; }
+    .register-left { display: none; }
+    .register-right { min-height: 100vh; padding: 48px 24px; align-items: flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div class="register-page">
+
+  <div class="register-left">
+    <div class="register-left-grid"></div>
+    <div class="register-left-glow"></div>
+
+    <a href="{{ url_for('main.landing') }}" class="register-left-topbar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span>ClinicalAI</span>
+    </a>
+
+    <div class="register-left-body">
+      <div class="register-left-pill">Get started today</div>
+
+      <h2 class="register-left-h">Join<br><em>ClinicalAI</em><br>in minutes</h2>
+
+      <p class="register-left-p">Register as a patient and start monitoring your health with AI-assisted risk assessment reviewed by licensed clinicians.</p>
+
+      <div class="register-steps">
+        <div class="register-step">
+          <div class="register-step-num">01</div>
+          <div class="register-step-text">
+            <div class="register-step-title">Create your account</div>
+            <div class="register-step-desc">Takes under two minutes. No payment required.</div>
+          </div>
+        </div>
+        <div class="register-step">
+          <div class="register-step-num">02</div>
+          <div class="register-step-text">
+            <div class="register-step-title">Submit your vitals</div>
+            <div class="register-step-desc">Enter six standard measurements from home.</div>
+          </div>
+        </div>
+        <div class="register-step">
+          <div class="register-step-num">03</div>
+          <div class="register-step-text">
+            <div class="register-step-title">Receive your result</div>
+            <div class="register-step-desc">A clinician reviews and adds a management plan.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="register-trust">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Every assessment reviewed by a licensed clinician
+      </div>
+    </div>
+  </div>
+
+  <div class="register-right">
+    <div class="register-card">
+      <div class="register-card-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Create free account
+      </div>
+
+      <div class="register-card-title">Create account</div>
+      <div class="register-card-sub">Fields marked * are required</div>
+
+      {% if error %}
+      <div class="reg-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <label class="reg-input-label">Account type *</label>
+        <select name="role" id="roleSelect" class="reg-role-select" onchange="togglePatientFields()">
+          <option value="patient">Patient</option>
+          <option value="doctor">Doctor / Clinician</option>
+        </select>
+
+        <div class="reg-grid-2">
+          <div>
+            <label class="reg-input-label">Full name *</label>
+            <div class="reg-input-wrap">
+              <svg class="reg-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" name="name" id="nameInput" class="reg-input" placeholder="Your full name" required autofocus autocomplete="name">
+            </div>
+            <div class="field-error" id="nameError"></div>
+          </div>
+          <div>
+            <label class="reg-input-label">Email address *</label>
+            <div class="reg-input-wrap">
+              <svg class="reg-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <input type="email" name="email" id="emailInput" class="reg-input" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="field-error" id="emailError"></div>
+          </div>
+        </div>
+
+        <div class="reg-grid-2">
+          <div>
+            <label class="reg-input-label">Password *</label>
+            <div class="reg-input-wrap">
+              <svg class="reg-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <input type="password" name="password" id="passwordInput" class="reg-input" placeholder="Min. 8 characters" required autocomplete="new-password">
+            </div>
+            <div class="pw-strength-bar" id="pwStrengthBar">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="pw-strength-label" id="pwStrengthLabel"></div>
+            <div class="field-error" id="passwordError"></div>
+          </div>
+          <div>
+            <label class="reg-input-label">Confirm password *</label>
+            <div class="reg-input-wrap">
+              <svg class="reg-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <input type="password" name="confirm_password" id="confirmInput" class="reg-input" placeholder="Repeat password" required autocomplete="new-password">
+            </div>
+            <div class="field-error" id="confirmError"></div>
+          </div>
+        </div>
+
+        <div id="patientFields">
+          <div class="reg-section-divider">
+            <span class="reg-section-label">Health profile (optional)</span>
+          </div>
+          <div class="reg-grid-2">
+            <div>
+              <label class="reg-input-label">Age</label>
+              <div class="reg-input-wrap">
+                <svg class="reg-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <input type="number" name="age" id="ageInput" class="reg-input" placeholder="35" min="1" max="100">
+              </div>
+              <div class="field-error" id="ageError"></div>
+            </div>
+            <div>
+              <label class="reg-input-label">Gender</label>
+              <select name="gender" class="reg-role-select" style="margin-bottom:0">
+                <option value="">Prefer not to say</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label class="reg-input-label">Underlying conditions</label>
+          <textarea name="conditions" class="reg-textarea" rows="2"
+                    placeholder="e.g. Hypertension, Type 2 Diabetes, COPD"></textarea>
+          <div class="reg-hint">Separate with commas. Used to contextualise your assessments.</div>
+        </div>
+
+        <button type="submit" class="reg-submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Create my account
+        </button>
+      </form>
+
+      <div class="reg-divider"><span>or</span></div>
+
+      <div class="reg-login-link">
+        Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── helpers ─────────────────────────────────────────── */
+const ERR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+function showError(inputEl, errorEl, msg) {
+  inputEl.classList.remove('input-ok');
+  inputEl.classList.add('input-error');
+  errorEl.innerHTML = ERR_ICON + ' ' + msg;
+}
+
+function showOk(inputEl, errorEl) {
+  inputEl.classList.remove('input-error');
+  inputEl.classList.add('input-ok');
+  errorEl.innerHTML = '';
+}
+
+function clearState(inputEl, errorEl) {
+  inputEl.classList.remove('input-error', 'input-ok');
+  errorEl.innerHTML = '';
+}
+
+/* ── name validation ─────────────────────────────────── */
+/* Must contain only letters, spaces, hyphens, apostrophes — no digits */
+function validateName() {
+  const el = document.getElementById('nameInput');
+  const err = document.getElementById('nameError');
+  const val = el.value.trim();
+
+  if (!val) {
+    showError(el, err, 'Full name is required.');
+    return false;
+  }
+  if (/\d/.test(val)) {
+    showError(el, err, 'Name must not contain numbers.');
+    return false;
+  }
+  if (!/^[a-zA-Z\s'\-\.]+$/.test(val)) {
+    showError(el, err, 'Name may only contain letters, spaces, hyphens or apostrophes.');
+    return false;
+  }
+  if (val.length < 2) {
+    showError(el, err, 'Name must be at least 2 characters.');
+    return false;
+  }
+  showOk(el, err);
+  return true;
+}
+
+/* ── email validation ────────────────────────────────── */
+function validateEmail() {
+  const el = document.getElementById('emailInput');
+  const err = document.getElementById('emailError');
+  const val = el.value.trim();
+  /* Standard RFC-5322 simplified pattern */
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  if (!val) {
+    showError(el, err, 'Email address is required.');
+    return false;
+  }
+  if (!emailRe.test(val)) {
+    showError(el, err, 'Please enter a valid email (e.g. you@example.com).');
+    return false;
+  }
+  showOk(el, err);
+  return true;
+}
+
+/* ── password strength & validation ──────────────────── */
+function getPasswordStrength(pw) {
+  let score = 0;
+  if (pw.length >= 8)             score++;
+  if (/[A-Z]/.test(pw))           score++;
+  if (/[0-9]/.test(pw))           score++;
+  if (/[^A-Za-z0-9]/.test(pw))   score++;
+  return score;   // 0-4
+}
+
+function updateStrengthBar(pw) {
+  const bar   = document.getElementById('pwStrengthBar');
+  const label = document.getElementById('pwStrengthLabel');
+  bar.className = 'pw-strength-bar';
+
+  if (!pw) { label.textContent = ''; return; }
+
+  const s = getPasswordStrength(pw);
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const colors = ['', '#dc2626', '#f59e0b', '#3b82f6', '#059669'];
+  bar.classList.add('s' + s);
+  label.textContent = labels[s] || '';
+  label.style.color = colors[s] || '#94a3b8';
+}
+
+function validatePassword() {
+  const el  = document.getElementById('passwordInput');
+  const err = document.getElementById('passwordError');
+  const pw  = el.value;
+
+  if (!pw) {
+    showError(el, err, 'Password is required.');
+    return false;
+  }
+  if (pw.length < 8) {
+    showError(el, err, 'Password must be at least 8 characters.');
+    return false;
+  }
+  if (!/[A-Z]/.test(pw)) {
+    showError(el, err, 'Password must include at least one uppercase letter.');
+    return false;
+  }
+  if (!/[0-9]/.test(pw)) {
+    showError(el, err, 'Password must include at least one number.');
+    return false;
+  }
+  if (!/[^A-Za-z0-9]/.test(pw)) {
+    showError(el, err, 'Password must include at least one special character (e.g. @, #, $).');
+    return false;
+  }
+  showOk(el, err);
+  return true;
+}
+
+function validateConfirm() {
+  const el      = document.getElementById('confirmInput');
+  const err     = document.getElementById('confirmError');
+  const pwEl    = document.getElementById('passwordInput');
+
+  if (!el.value) {
+    showError(el, err, 'Please confirm your password.');
+    return false;
+  }
+  if (el.value !== pwEl.value) {
+    showError(el, err, 'Passwords do not match.');
+    return false;
+  }
+  showOk(el, err);
+  return true;
+}
+
+/* ── age validation ──────────────────────────────────── */
+function validateAge() {
+  const el  = document.getElementById('ageInput');
+  const err = document.getElementById('ageError');
+  const val = el.value.trim();
+
+  /* Age is optional — only validate if something was entered */
+  if (!val) { clearState(el, err); return true; }
+
+  /* Must be a whole number */
+  if (!/^\d+$/.test(val)) {
+    showError(el, err, 'Age must be a whole number.');
+    return false;
+  }
+  const age = parseInt(val, 10);
+  if (age < 1 || age > 100) {
+    showError(el, err, 'Age must be between 1 and 100.');
+    return false;
+  }
+  showOk(el, err);
+  return true;
+}
+
+/* ── live listeners ───────────────────────────────────── */
+document.getElementById('nameInput').addEventListener('input', validateName);
+document.getElementById('emailInput').addEventListener('input', validateEmail);
+document.getElementById('passwordInput').addEventListener('input', function () {
+  updateStrengthBar(this.value);
+  validatePassword();
+  /* Re-check confirm if already touched */
+  if (document.getElementById('confirmInput').value) validateConfirm();
+});
+document.getElementById('confirmInput').addEventListener('input', validateConfirm);
+document.getElementById('ageInput').addEventListener('input', validateAge);
+
+/* ── form submit guard ───────────────────────────────── */
+document.getElementById('registerForm').addEventListener('submit', function (e) {
+  const role = document.getElementById('roleSelect').value;
+
+  const nameOk    = validateName();
+  const emailOk   = validateEmail();
+  const passOk    = validatePassword();
+  const confirmOk = validateConfirm();
+  const ageOk     = (role === 'patient') ? validateAge() : true;
+
+  if (!nameOk || !emailOk || !passOk || !confirmOk || !ageOk) {
+    e.preventDefault();
+    /* Scroll to first error */
+    const firstErr = document.querySelector('.input-error');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+/* ── toggle patient fields ────────────────────────────── */
+function togglePatientFields() {
+  var role = document.getElementById('roleSelect').value;
+  document.getElementById('patientFields').style.display = role === 'patient' ? 'block' : 'none';
+  /* Clear age error when hidden */
+  if (role !== 'patient') {
+    clearState(document.getElementById('ageInput'), document.getElementById('ageError'));
+  }
+}
+togglePatientFields();
+</script>
+{% endblock %}

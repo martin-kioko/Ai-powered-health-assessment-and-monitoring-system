@@ -1,0 +1,647 @@
+{% extends "base.html" %}
+{% block title %}System Admin — ClinicalAI{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     GLOBAL LAYOUT — matches patient dashboard exactly
+  ═══════════════════════════════════════════════════════════════ */
+  :root {
+    --sidebar-w: 280px;
+    --header-h:  58px;
+  }
+
+  .main-content,
+  .page-content,
+  .content-wrapper,
+  main {
+    padding-top: var(--header-h) !important;
+  }
+
+  /* ─── FIXED HEADER ───────────────────────────────────────────── */
+  .dash-header {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    height: var(--header-h);
+    z-index: 500;
+    background: #0f2952;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 2px 20px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 28px;
+    box-sizing: border-box;
+  }
+
+  /* ─── HEADER NAV ─────────────────────────────────────────────── */
+  .dash-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dash-header-nav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,.60);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color .18s, background .18s;
+  }
+  .dash-header-nav a svg {
+    width: 14px; height: 14px; flex-shrink: 0;
+    opacity: .65; transition: opacity .18s;
+  }
+  .dash-header-nav a:hover     { color: #fff; background: rgba(255,255,255,.09); }
+  .dash-header-nav a:hover svg { opacity: 1; }
+  .dash-header-nav a.active    {
+    color: #fff;
+    background: rgba(255,255,255,.11);
+    border: 1px solid rgba(255,255,255,.13);
+  }
+
+  .dash-header-nav .nav-signout {
+    color: rgba(255,255,255,.42);
+    border: 1px solid rgba(255,255,255,.09);
+    margin-left: 8px;
+  }
+  .dash-header-nav .nav-signout:hover {
+    color: #fca5a5;
+    background: rgba(220,38,38,.14);
+    border-color: rgba(220,38,38,.28);
+  }
+  .dash-header-nav .nav-signout:hover svg { opacity: 1; }
+
+  .dash-nav-divider {
+    width: 1px; height: 20px;
+    background: rgba(255,255,255,.12);
+    margin: 0 6px; flex-shrink: 0;
+  }
+
+  /* ─── SIDEBAR — golden yellow applied via JS only ────────────── */
+  /* Hide dashboard/assessment links from sidebar (JS also does this) */
+  .sidebar a[href*="dashboard"],
+  .sidebar a[href*="assessment"],
+  aside a[href*="dashboard"],
+  aside a[href*="assessment"],
+  [class*="sidebar"] a[href*="dashboard"],
+  [class*="sidebar"] a[href*="assessment"] {
+    display: none !important;
+  }
+
+  /* ─── ADMIN-SPECIFIC STYLES ──────────────────────────────────── */
+  .admin-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .donut-wrap { position: relative; height: 240px; }
+  .bar-wrap   { position: relative; height: 240px; }
+
+  .asm-row { cursor: pointer; }
+  .asm-row:hover td { background: #eff6ff !important; }
+
+  .asm-detail-row { display: none; }
+  .asm-detail-row.open { display: table-row; }
+
+  .asm-detail-cell {
+    padding: 0 !important;
+    border-bottom: 2px solid var(--accent-border) !important;
+  }
+
+  .asm-detail-inner {
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    border-left: 3px solid var(--accent);
+  }
+
+  .asm-vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .asm-vital {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 8px;
+    text-align: center;
+  }
+
+  .asm-vital-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.2;
+  }
+
+  .asm-vital-lbl {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    margin-top: 2px;
+  }
+
+  .asm-rec {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .asm-toggle {
+    font-size: 10px;
+    color: var(--text-dim);
+    transition: transform .15s;
+    display: inline-block;
+  }
+
+  .asm-row.open .asm-toggle { transform: rotate(180deg); }
+
+  .user-avatar-sm {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .avatar-patient { background: var(--low-bg);      color: var(--low);    border: 1px solid var(--low-border); }
+  .avatar-doctor  { background: var(--accent-muted); color: var(--accent); border: 1px solid var(--accent-border); }
+  .avatar-admin   { background: var(--medium-bg);   color: var(--medium); border: 1px solid var(--medium-border); }
+
+  .user-name-wrap { display: flex; align-items: center; gap: 9px; }
+
+  .log-action-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: var(--accent-muted);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--accent-border);
+    white-space: nowrap;
+  }
+
+  .log-action-pill.danger  { color: var(--high);   background: var(--high-bg);   border-color: var(--high-border); }
+  .log-action-pill.success { color: var(--low);    background: var(--low-bg);    border-color: var(--low-border); }
+
+  .o2-badge-sm {
+    font-size: 9px; font-weight: 600;
+    padding: 1px 5px; border-radius: 3px;
+    background: var(--accent-muted); color: var(--accent);
+    border: 1px solid var(--accent-border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+  @media (max-width: 1024px) { .admin-charts-row { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 900px)  { :root { --sidebar-w: 0px; } .dash-header { left: 0; } }
+  @media (max-width: 700px)  { .admin-charts-row { grid-template-columns: 1fr; } .asm-vitals-grid { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 640px)  { .dash-header { padding: 0 12px; } .dash-header-nav a span { display: none; } .dash-header-nav a { padding: 7px 9px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══════════ FIXED HEADER — identical style to patient dashboard ══════════ -->
+<header class="dash-header">
+  <nav>
+    <ul class="dash-header-nav">
+
+      <!-- My Dashboard (active) -->
+      <li>
+        <a href="{{ url_for('admin.dashboard') }}" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3"  y="3"  width="7" height="7"/>
+            <rect x="14" y="3"  width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3"  y="14" width="7" height="7"/>
+          </svg>
+          <span>My Dashboard</span>
+        </a>
+      </li>
+
+      <!-- Home -->
+      <li>
+        <a href="{{ url_for('auth.logout') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Home</span>
+        </a>
+      </li>
+
+      <div class="dash-nav-divider"></div>
+
+      <!-- Sign out -->
+      <li>
+        <a href="{{ url_for('auth.logout') }}" class="nav-signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign out</span>
+        </a>
+      </li>
+
+    </ul>
+  </nav>
+</header>
+<!-- ══════════════════════════════════════════════════════════════ -->
+
+
+<!-- ── PAGE HEADER ── -->
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-top:20px">
+  <div>
+    <h1 class="page-title">System administration</h1>
+    <p class="page-sub">{{ users|length }} registered users · {{ total_assessments }} total assessments</p>
+  </div>
+  <div style="background:var(--accent-muted);border:1px solid var(--accent-border);border-radius:var(--radius-md);padding:7px 13px;font-size:12px;font-weight:600;color:var(--accent)">
+    {{ patients_count }} patients · {{ doctors_count }} clinicians
+  </div>
+</div>
+
+
+<!-- ── STAT CARDS ── -->
+<div class="stat-grid">
+  <div class="stat-card accent-blue">
+    <div class="stat-value">{{ users|length }}</div>
+    <div class="stat-label">Total users</div>
+  </div>
+  <div class="stat-card accent-low">
+    <div class="stat-value">{{ patients_count }}</div>
+    <div class="stat-label">Patients</div>
+  </div>
+  <div class="stat-card accent-blue">
+    <div class="stat-value">{{ doctors_count }}</div>
+    <div class="stat-label">Clinicians</div>
+  </div>
+  <div class="stat-card accent-muted">
+    <div class="stat-value">{{ total_assessments }}</div>
+    <div class="stat-label">Assessments</div>
+  </div>
+  <div class="stat-card accent-high">
+    <div class="stat-value">{{ risk_counts.High }}</div>
+    <div class="stat-label">High risk</div>
+  </div>
+  <div class="stat-card accent-medium">
+    <div class="stat-value">{{ risk_counts.Medium }}</div>
+    <div class="stat-label">Medium risk</div>
+  </div>
+  <div class="stat-card accent-low">
+    <div class="stat-value">{{ risk_counts.Low }}</div>
+    <div class="stat-label">Low risk</div>
+  </div>
+</div>
+
+
+<!-- ── CHARTS ── -->
+<div class="admin-charts-row">
+  <div class="chart-box">
+    <div class="chart-title">Risk distribution</div>
+    <div class="donut-wrap"><canvas id="pieChart"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <div class="chart-title">Assessments by risk level</div>
+    <div class="bar-wrap"><canvas id="riskBarChart"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <div class="chart-title">User breakdown</div>
+    <div class="bar-wrap"><canvas id="userBarChart"></canvas></div>
+  </div>
+</div>
+
+
+<!-- ── RECENT ASSESSMENTS ── -->
+{% if recent_assessments %}
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Recent assessments</div>
+      <div class="card-sub">Last 50 · Click any row to view vitals</div>
+    </div>
+    <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace">{{ total_assessments }} total</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Patient</th><th>Date</th><th>Risk</th>
+          <th>RR</th><th>SpO₂</th><th>Sys BP</th><th>HR</th><th>Temp</th>
+          <th>Confidence</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent_assessments %}
+        <tr class="asm-row" onclick="toggleAsm({{ loop.index0 }})" id="asmrow-{{ loop.index0 }}">
+          <td class="mono" style="color:var(--text-muted)">{{ a.id }}</td>
+          <td style="font-weight:500;color:var(--navy);white-space:nowrap">{{ a.patient_name }}</td>
+          <td style="white-space:nowrap;font-size:12px">{{ a.created_at }}</td>
+          <td><span class="risk-badge risk-{{ a.final_risk }}">{{ a.final_risk }}</span></td>
+          <td class="mono">{{ a.respiratory_rate }}</td>
+          <td class="mono">{{ a.oxygen_saturation }}%</td>
+          <td class="mono">{{ a.systolic_bp }}</td>
+          <td class="mono">{{ a.heart_rate }}</td>
+          <td class="mono">{{ a.temperature }}°</td>
+          <td class="mono">{{ '%.0f%%'|format(a.ml_probability*100) }}</td>
+          <td>
+            <span style="font-size:11px;font-weight:600;color:{% if a.status=='reviewed' %}var(--low){% else %}var(--medium){% endif %}">
+              {{ a.status | title }}
+            </span>
+          </td>
+          <td style="text-align:center">
+            <span class="asm-toggle" id="asmtoggle-{{ loop.index0 }}">▾</span>
+          </td>
+        </tr>
+
+        <tr class="asm-detail-row" id="asmdetail-{{ loop.index0 }}">
+          <td class="asm-detail-cell" colspan="12">
+            <div class="asm-detail-inner">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);margin-bottom:10px">
+                Vital signs — {{ a.patient_name }} · {{ a.created_at }}
+              </div>
+              <div class="asm-vitals-grid">
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.respiratory_rate }}</div><div class="asm-vital-lbl">Resp/min</div></div>
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.oxygen_saturation }}%</div><div class="asm-vital-lbl">SpO₂</div></div>
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.systolic_bp }}</div><div class="asm-vital-lbl">Sys BP</div></div>
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.heart_rate }}</div><div class="asm-vital-lbl">HR bpm</div></div>
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.temperature }}°</div><div class="asm-vital-lbl">Temp °C</div></div>
+                <div class="asm-vital"><div class="asm-vital-val">{{ a.consciousness }}</div><div class="asm-vital-lbl">ACVPU</div></div>
+              </div>
+              {% if a.on_oxygen %}
+              <div style="margin-bottom:8px"><span class="o2-badge-sm">On supplemental O₂</span></div>
+              {% endif %}
+              <div class="asm-rec">
+                <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--navy)">Risk: </span>
+                <span style="color:{% if a.final_risk=='High' %}var(--high){% elif a.final_risk=='Medium' %}var(--medium){% else %}var(--low){% endif %};font-weight:600;font-size:12px">{{ a.final_risk }}</span>
+                <span style="color:var(--text-dim);font-size:11px;margin:0 6px">·</span>
+                <span style="font-size:11px;color:var(--text-muted)">Model: {{ a.ml_prediction }} ({{ '%.0f%%'|format(a.ml_probability*100) }})</span>
+                <div style="margin-top:5px;font-size:12px;color:var(--text-muted)">{{ a.recommendation }}</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ── USER MANAGEMENT ── -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">User management</div>
+      <div class="card-sub">{{ users|length }} registered accounts</div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Registered</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="user-name-wrap">
+              <div class="user-avatar-sm avatar-{{ u.role }}">{{ u.name[0].upper() }}</div>
+              <span style="font-weight:500;color:var(--navy)">{{ u.name }}</span>
+            </div>
+          </td>
+          <td class="mono" style="font-size:11px;color:var(--text-muted)">{{ u.email }}</td>
+          <td><span class="role-badge role-{{ u.role }}">{{ u.role }}</span></td>
+          <td>
+            <span style="font-size:12px;font-weight:600;color:{% if u.is_active %}var(--low){% else %}var(--high){% endif %}">
+              {{ 'Active' if u.is_active else 'Inactive' }}
+            </span>
+          </td>
+          <td style="font-size:12px;color:var(--text-muted)">{{ u.created_at }}</td>
+          <td>
+            {% if u.id != current_user.id %}
+            <form method="POST" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button type="submit" class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                {{ 'Deactivate' if u.is_active else 'Activate' }}
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace">You</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ── AUDIT LOG ── -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Audit log</div>
+    <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace">Last 100 events</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Timestamp</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="mono" style="font-size:11px;white-space:nowrap;color:var(--text-dim)">{{ log.time }}</td>
+          <td>
+            <div class="user-name-wrap">
+              <div class="user-avatar-sm avatar-{{ log.role|lower }}">{{ log.user[0].upper() }}</div>
+              <span style="font-size:13px;font-weight:500;color:var(--navy)">{{ log.user }}</span>
+            </div>
+          </td>
+          <td><span class="role-badge role-{{ log.role|lower }}">{{ log.role }}</span></td>
+          <td>
+            <span class="log-action-pill {% if 'DEACTIVATE' in log.action %}danger{% elif 'ACTIVATE' in log.action or 'REVIEW' in log.action %}success{% endif %}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td style="font-size:12px;color:var(--text-muted)">{{ log.details }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+pieChart('pieChart', {{ risk_counts | tojson }});
+
+(function(){
+  var el = document.getElementById('riskBarChart');
+  if (!el) return;
+  var c = {{ risk_counts | tojson }};
+  new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['Low', 'Medium', 'High'],
+      datasets: [{
+        data: [c.Low || 0, c.Medium || 0, c.High || 0],
+        backgroundColor: ['rgba(5,150,105,.15)', 'rgba(217,119,6,.15)', 'rgba(220,38,38,.15)'],
+        borderColor:     ['#059669', '#d97706', '#dc2626'],
+        borderWidth: 1.5, borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', borderColor: '#e2e8f0', borderWidth: 1,
+          titleColor: '#0f172a', bodyColor: '#475569', cornerRadius: 6, padding: 10,
+          callbacks: { label: ctx => ' ' + ctx.raw + ' assessment' + (ctx.raw !== 1 ? 's' : '') },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono',monospace", size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.9)' },
+             ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono',monospace", size: 10 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : '' } },
+      },
+    },
+  });
+})();
+
+(function(){
+  var el = document.getElementById('userBarChart');
+  if (!el) return;
+  new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['Patients', 'Clinicians', 'Admins'],
+      datasets: [{
+        data: [
+          {{ patients_count }},
+          {{ doctors_count }},
+          {{ users|selectattr('role','equalto','admin')|list|length }},
+        ],
+        backgroundColor: ['rgba(5,150,105,.15)', 'rgba(37,99,235,.15)', 'rgba(217,119,6,.15)'],
+        borderColor:     ['#059669', '#2563eb', '#d97706'],
+        borderWidth: 1.5, borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', borderColor: '#e2e8f0', borderWidth: 1,
+          titleColor: '#0f172a', bodyColor: '#475569', cornerRadius: 6, padding: 10,
+          callbacks: { label: ctx => ' ' + ctx.raw + ' user' + (ctx.raw !== 1 ? 's' : '') },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono',monospace", size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.9)' },
+             ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono',monospace", size: 10 }, stepSize: 1, callback: v => Number.isInteger(v) ? v : '' } },
+      },
+    },
+  });
+})();
+
+function toggleAsm(idx) {
+  var row    = document.getElementById('asmrow-'    + idx);
+  var detail = document.getElementById('asmdetail-' + idx);
+  var toggle = document.getElementById('asmtoggle-' + idx);
+  var isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  row.classList.toggle('open', !isOpen);
+  toggle.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+</script>
+
+{#
+  ── SIDEBAR: GOLDEN-YELLOW FIRST SECTION ONLY ────────────────────
+  Applied exclusively via JS on firstElementChild — cannot bleed
+  to any other sidebar section. Mirrors patient dashboard exactly.
+#}
+<script>
+(function () {
+  function modifyAdminSidebar() {
+
+    /* ── 1. Find the sidebar ── */
+    var sidebar = document.querySelector(
+      '.sidebar, aside, [class*="sidebar"], nav.side, #sidebar'
+    );
+    if (!sidebar) return;
+
+    /* ── 2. Solid golden-yellow on FIRST section only ── */
+    var firstSection = sidebar.firstElementChild;
+    if (firstSection) {
+      firstSection.style.setProperty('background', '#eab308', 'important');
+      firstSection.style.setProperty('border-bottom', '2px solid #ca8a04', 'important');
+      firstSection.style.setProperty('box-shadow', '0 3px 10px rgba(202,138,4,.40)', 'important');
+      /* Dark navy text for legibility on yellow */
+      firstSection.querySelectorAll('*').forEach(function (el) {
+        el.style.setProperty('color', '#1e3a5f', 'important');
+      });
+    }
+
+    /* ── 3. Hide Dashboard & New Assessment links in sidebar ── */
+    sidebar.querySelectorAll('a').forEach(function (link) {
+      var href = (link.getAttribute('href') || '').toLowerCase();
+      var text = link.textContent.trim().toLowerCase();
+      if (
+        href.indexOf('dashboard') !== -1 ||
+        href.indexOf('assessment') !== -1 ||
+        text === 'dashboard' ||
+        text === 'my dashboard' ||
+        text === 'new assessment'
+      ) {
+        var parent = link.closest('li') || link;
+        parent.style.display = 'none';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', modifyAdminSidebar);
+  } else {
+    modifyAdminSidebar();
+  }
+})();
+</script>
+{% endblock %}

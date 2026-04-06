@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ClinicalAI{% endblock %}
+
+{% block head_extra %}
+<style>
+  :root {
+    --sidebar-w: 280px;
+    --header-h:  58px;
+  }
+
+  .main-content,
+  .page-content,
+  .content-wrapper,
+  main {
+    padding-top: var(--header-h) !important;
+  }
+
+  /* ─── FIXED HEADER ───────────────────────────────────────────── */
+  .dash-header {
+    position: fixed;
+    top: 0; left: var(--sidebar-w); right: 0;
+    height: var(--header-h);
+    z-index: 500;
+    background: #0f2952;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 2px 20px rgba(0,0,0,.35);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 28px;
+    box-sizing: border-box;
+  }
+
+  .dash-header-nav {
+    display: flex; align-items: center; gap: 2px;
+    list-style: none; margin: 0; padding: 0;
+  }
+  .dash-header-nav a {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 7px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,.60); text-decoration: none;
+    white-space: nowrap; transition: color .18s, background .18s;
+  }
+  .dash-header-nav a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: .65; transition: opacity .18s; }
+  .dash-header-nav a:hover     { color: #fff; background: rgba(255,255,255,.09); }
+  .dash-header-nav a:hover svg { opacity: 1; }
+  .dash-header-nav a.active    { color: #fff; background: rgba(255,255,255,.11); border: 1px solid rgba(255,255,255,.13); }
+  .dash-header-nav .nav-signout { color: rgba(255,255,255,.42); border: 1px solid rgba(255,255,255,.09); margin-left: 8px; }
+  .dash-header-nav .nav-signout:hover { color: #fca5a5; background: rgba(220,38,38,.14); border-color: rgba(220,38,38,.28); }
+  .dash-nav-divider { width: 1px; height: 20px; background: rgba(255,255,255,.12); margin: 0 6px; }
+
+  /* ─── STAT CARDS ─────────────────────────────────────────────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    border-top: 3px solid transparent;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-card.accent-blue   { border-top-color: var(--accent); }
+  .stat-card.accent-muted  { border-top-color: #94a3b8; }
+  .stat-card.accent-low    { border-top-color: var(--low); }
+  .stat-card.accent-medium { border-top-color: var(--medium); }
+  .stat-card.accent-high   { border-top-color: var(--high); }
+  .stat-value { font-size: 32px; font-weight: 700; color: var(--navy); line-height: 1; margin-bottom: 6px; }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); font-weight: 600; }
+
+  /* ─── TABS ───────────────────────────────────────────────────── */
+  .dash-tabs {
+    display: flex; gap: 4px; margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+  }
+  .dash-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600;
+    color: var(--text-dim); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    background: none; border-top: none; border-left: none; border-right: none;
+    transition: color .15s, border-color .15s;
+  }
+  .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-badge {
+    font-size: 10px; font-weight: 700; padding: 1px 7px;
+    border-radius: 10px; line-height: 1.6;
+  }
+  .tab-badge.red  { background: var(--high); color: #fff; }
+  .tab-badge.blue { background: var(--accent-muted); color: var(--accent); border: 1px solid var(--accent-border); }
+
+  .dash-tab-panel { display: none; }
+  .dash-tab-panel.active { display: block; }
+
+  /* ─── REVIEW CARD ────────────────────────────────────────────── */
+  .rc {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    transition: box-shadow .2s;
+  }
+  .rc:hover { box-shadow: 0 4px 16px rgba(0,0,0,.10); }
+
+  /* risk accent stripe */
+  .rc.high-risk   { border-left: 5px solid var(--high); }
+  .rc.medium-risk { border-left: 5px solid var(--medium); }
+  .rc.low-risk    { border-left: 5px solid var(--low); }
+
+  /* ── Header row ── */
+  .rc-hd {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer; user-select: none;
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+    transition: background .15s;
+    gap: 12px;
+  }
+  .rc.open .rc-hd { background: #f0f7ff; border-bottom-color: #c7dffe; }
+
+  .rc-hd-left  { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; flex-wrap: wrap; }
+  .rc-hd-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .rc-name { font-size: 15px; font-weight: 700; color: var(--navy); }
+  .rc-sub  { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+
+  /* risk pill — larger, prominent */
+  .rc-risk-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .4px;
+    flex-shrink: 0;
+  }
+  .rc-risk-pill.High   { background: #fef2f2; color: var(--high);   border: 1px solid #fecaca; }
+  .rc-risk-pill.Medium { background: #fffbeb; color: var(--medium); border: 1px solid #fde68a; }
+  .rc-risk-pill.Low    { background: #f0fdf4; color: var(--low);    border: 1px solid #bbf7d0; }
+
+  .rc-risk-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .rc-risk-pill.High   .dot { background: var(--high); }
+  .rc-risk-pill.Medium .dot { background: var(--medium); }
+  .rc-risk-pill.Low    .dot { background: var(--low); }
+
+  /* quick vitals in header */
+  .rc-vitals-inline { display: flex; gap: 6px; flex-wrap: wrap; }
+  .vp {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .rc-chevron {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-muted);
+    transition: transform .2s, background .15s; flex-shrink: 0;
+  }
+  .rc.open .rc-chevron { transform: rotate(180deg); background: var(--accent); color: #fff; }
+
+  /* ── Body ── */
+  .rc-body { display: none; padding: 22px 20px; }
+  .rc.open .rc-body { display: block; }
+
+  .rc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* ── Vitals block ── */
+  .rc-vitals-grid {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 8px; margin-bottom: 16px;
+  }
+  .rc-v {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px; text-align: center;
+  }
+  .rc-v-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: var(--navy); }
+  .rc-v-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  /* ── Risk summary banner ── */
+  .risk-banner {
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 0;
+    border: 1px solid transparent;
+  }
+  .risk-banner.High   { background: #fef2f2; border-color: #fecaca; }
+  .risk-banner.Medium { background: #fffbeb; border-color: #fde68a; }
+  .risk-banner.Low    { background: #f0fdf4; border-color: #bbf7d0; }
+
+  .risk-banner-title {
+    font-size: 14px; font-weight: 700; margin-bottom: 4px;
+  }
+  .risk-banner.High   .risk-banner-title { color: var(--high); }
+  .risk-banner.Medium .risk-banner-title { color: var(--medium); }
+  .risk-banner.Low    .risk-banner-title { color: var(--low); }
+
+  .risk-banner-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+  .o2-badge {
+    display: inline-block; font-size: 9px; font-weight: 600;
+    padding: 2px 6px; border-radius: 3px; margin-bottom: 12px;
+    background: var(--accent-muted); color: var(--accent);
+    border: 1px solid var(--accent-border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .blk-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .7px; color: var(--navy);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .blk-label svg { width: 12px; height: 12px; color: var(--accent); }
+
+  /* ── Review form ── */
+  .review-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    height: 100%; box-sizing: border-box;
+  }
+  .review-box textarea {
+    width: 100%; min-height: 140px; resize: vertical;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 12px; font-size: 13px; color: var(--navy);
+    background: var(--bg-card); font-family: inherit;
+    line-height: 1.6; box-sizing: border-box;
+    transition: border-color .15s;
+  }
+  .review-box textarea:focus { outline: none; border-color: var(--accent); }
+  .review-box textarea::placeholder { color: var(--text-dim); }
+
+  .btn-mark {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius); padding: 10px 20px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background .15s; align-self: flex-end;
+  }
+  .btn-mark:hover { background: #1d4ed8; }
+
+  /* ─── EMPTY ──────────────────────────────────────────────────── */
+  .empty-state-box {
+    text-align: center; padding: 60px 20px;
+  }
+  .empty-state-box svg { width: 52px; height: 52px; margin: 0 auto 16px; display: block; opacity: .3; }
+  .empty-state-box h3  { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .empty-state-box p   { font-size: 13px; color: var(--text-dim); }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+  @media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 0px; }
+    .dash-header { left: 0; }
+    .rc-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2,1fr); }
+    .rc-vitals-grid { grid-template-columns: repeat(2,1fr); }
+  }
+  @media (max-width: 640px) {
+    .dash-header { padding: 0 12px; }
+    .dash-header-nav a span { display: none; }
+    .dash-header-nav a { padding: 7px 9px; }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="dash-header">
+  <nav>
+    <ul class="dash-header-nav">
+      <li>
+        <a href="{{ url_for('doctor.dashboard') }}" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span>My Dashboard</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Home</span>
+        </a>
+      </li>
+      <div class="dash-nav-divider"></div>
+      <li>
+        <a href="{{ url_for('auth.logout') }}" class="nav-signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign out</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+
+<!-- ── PAGE HEADER ── -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:20px;margin-bottom:22px">
+  <div>
+    <h1 class="page-title">{{ current_user.name }}</h1>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:3px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px">Physician Dashboard</div>
+  </div>
+</div>
+
+
+<!-- ── STAT CARDS ── -->
+<div class="stat-grid">
+  <div class="stat-card accent-blue">
+    <div class="stat-value">{{ total_assessments }}</div>
+    <div class="stat-label">Total assessments</div>
+  </div>
+  <div class="stat-card accent-muted">
+    <div class="stat-value">{{ pending | length }}</div>
+    <div class="stat-label">Awaiting review</div>
+  </div>
+  <div class="stat-card accent-low">
+    <div class="stat-value">{{ risk_counts.Low }}</div>
+    <div class="stat-label">Low risk</div>
+  </div>
+  <div class="stat-card accent-medium">
+    <div class="stat-value">{{ risk_counts.Medium }}</div>
+    <div class="stat-label">Medium risk</div>
+  </div>
+  <div class="stat-card accent-high">
+    <div class="stat-value">{{ risk_counts.High }}</div>
+    <div class="stat-label">High risk</div>
+  </div>
+</div>
+
+
+<!-- ── TABS ── -->
+<div class="dash-tabs">
+  <button class="dash-tab active" onclick="switchTab('tab-pending', this)">
+    Pending Reviews
+    {% if pending %}
+      <span class="tab-badge red">{{ pending | length }}</span>
+    {% endif %}
+  </button>
+  <button class="dash-tab" onclick="switchTab('tab-patients', this)">
+    All Patients
+    <span class="tab-badge blue">{{ patients | length }}</span>
+  </button>
+</div>
+
+
+<!-- ══════════════════════════════
+     TAB 1 — PENDING REVIEWS
+══════════════════════════════ -->
+<div id="tab-pending" class="dash-tab-panel active">
+
+  {% if pending %}
+    {% for a in pending %}
+    <div class="rc {{ a.final_risk|lower }}-risk" id="rc-{{ loop.index0 }}">
+
+      <!-- ── Header ── -->
+      <div class="rc-hd" onclick="toggleRC({{ loop.index0 }})">
+        <div class="rc-hd-left">
+
+          <!-- Risk pill -->
+          <span class="rc-risk-pill {{ a.final_risk }}">
+            <span class="dot"></span>
+            {{ a.final_risk }} Risk
+          </span>
+
+          <!-- Name + meta -->
+          <div>
+            <div class="rc-name">{{ a.patient_name }}</div>
+            <div class="rc-sub">Assessment #{{ a.id }} &middot; {{ a.created_at }}</div>
+          </div>
+
+          <!-- Quick vitals -->
+          <div class="rc-vitals-inline">
+            <span class="vp">RR {{ a.respiratory_rate }}</span>
+            <span class="vp">SpO₂ {{ a.oxygen_saturation }}%</span>
+            <span class="vp">HR {{ a.heart_rate }}</span>
+            <span class="vp">Temp {{ a.temperature }}°C</span>
+          </div>
+        </div>
+
+        <div class="rc-hd-right">
+          <span style="font-size:11px;font-weight:600;color:var(--medium);font-family:'JetBrains Mono',monospace">Pending</span>
+          <div class="rc-chevron">▾</div>
+        </div>
+      </div>
+
+      <!-- ── Body ── -->
+      <div class="rc-body">
+        <div class="rc-grid">
+
+          <!-- LEFT: vitals + risk summary -->
+          <div>
+            <div class="blk-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+              Vital signs
+            </div>
+
+            <div class="rc-vitals-grid">
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.respiratory_rate }}</div>
+                <div class="rc-v-lbl">Resp / min</div>
+              </div>
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.oxygen_saturation }}%</div>
+                <div class="rc-v-lbl">SpO₂</div>
+              </div>
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.systolic_bp }}</div>
+                <div class="rc-v-lbl">Sys BP</div>
+              </div>
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.heart_rate }}</div>
+                <div class="rc-v-lbl">HR bpm</div>
+              </div>
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.temperature }}°</div>
+                <div class="rc-v-lbl">Temp °C</div>
+              </div>
+              <div class="rc-v">
+                <div class="rc-v-val">{{ a.consciousness }}</div>
+                <div class="rc-v-lbl">ACVPU</div>
+              </div>
+            </div>
+
+            {% if a.on_oxygen %}
+            <div><span class="o2-badge">On supplemental O₂</span></div>
+            {% endif %}
+
+            <!-- Risk summary — clean, no model/confidence -->
+            <div class="risk-banner {{ a.final_risk }}">
+              <div class="risk-banner-title">
+                {% if a.final_risk == 'High' %}
+                  ⚠ High Risk — urgent attention required
+                {% elif a.final_risk == 'Medium' %}
+                  ◉ Medium Risk — monitor closely
+                {% else %}
+                  ✓ Low Risk — routine follow-up
+                {% endif %}
+              </div>
+              <div class="risk-banner-text">{{ a.recommendation }}</div>
+            </div>
+          </div>
+
+          <!-- RIGHT: review form -->
+          <div>
+            <div class="blk-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Clinical review
+            </div>
+
+            <div class="review-box">
+              <div style="font-size:13px;color:var(--text-muted);line-height:1.6">
+                Write your clinical notes for
+                <strong style="color:var(--navy)">{{ a.patient_name }}</strong>.
+                Submitting will mark this assessment as <em>reviewed</em>.
+              </div>
+              <form method="POST" action="{{ url_for('doctor.review', assessment_id=a.id) }}">
+                <textarea
+                  name="note"
+                  placeholder="Enter observations, clinical findings, and recommended next steps…"
+                  required
+                ></textarea>
+                <button type="submit" class="btn-mark">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Mark as Reviewed
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="empty-state-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 12l2 2 4-4"/>
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      <h3>All caught up!</h3>
+      <p>No assessments are pending review at this time.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+
+<!-- ══════════════════════════════
+     TAB 2 — ALL PATIENTS
+══════════════════════════════ -->
+<div id="tab-patients" class="dash-tab-panel">
+
+  {% if patients %}
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Conditions</th>
+            <th>Latest Risk</th>
+            <th style="text-align:center">Assessments</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in patients %}
+          <tr>
+            <td style="font-weight:600;color:var(--navy)">{{ p.name }}</td>
+            <td class="mono">{{ p.age if p.age else '—' }}</td>
+            <td>{{ p.gender if p.gender else '—' }}</td>
+            <td style="font-size:12px;color:var(--text-muted)">{{ p.conditions if p.conditions else '—' }}</td>
+            <td>
+              {% if p.latest_risk %}
+                <span class="rc-risk-pill {{ p.latest_risk }}" style="font-size:11px;padding:3px 10px">
+                  <span class="dot"></span>{{ p.latest_risk }}
+                </span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="mono" style="text-align:center">{{ p.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+    <div class="empty-state-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+        <path d="M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+      <h3>No patients yet</h3>
+      <p>Patient records will appear here once assessments are submitted.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.dash-tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.dash-tab').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleRC(idx) {
+  document.getElementById('rc-' + idx).classList.toggle('open');
+}
+</script>
+
+<script>
+(function(){
+  function styleSidebar(){
+    var sb = document.querySelector('.sidebar,aside,[class*="sidebar"],nav.side,#sidebar');
+    if(!sb) return;
+    var first = sb.firstElementChild;
+    if(first){
+      first.style.setProperty('background','#eab308','important');
+      first.style.setProperty('border-bottom','2px solid #ca8a04','important');
+      first.style.setProperty('box-shadow','0 3px 10px rgba(202,138,4,.40)','important');
+      first.querySelectorAll('*').forEach(function(el){
+        el.style.setProperty('color','#1e3a5f','important');
+      });
+    }
+    sb.querySelectorAll('a').forEach(function(link){
+      var href=(link.getAttribute('href')||'').toLowerCase();
+      var text=link.textContent.trim().toLowerCase();
+      if(href.indexOf('dashboard')!==-1||href.indexOf('assessment')!==-1||
+         text==='dashboard'||text==='my dashboard'||text==='new assessment'){
+        (link.closest('li')||link).style.display='none';
+      }
+    });
+  }
+  document.readyState==='loading'
+    ? document.addEventListener('DOMContentLoaded',styleSidebar)
+    : styleSidebar();
+})();
+</script>
+{% endblock %}
