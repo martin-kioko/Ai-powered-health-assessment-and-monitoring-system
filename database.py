@@ -112,7 +112,7 @@ def init_db(database_url: str) -> None:
         echo=False,
     )
     _SessionFactory = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
-    Base.metadata.create_all(bind=_engine)
+    Base.metadata.create_all(bind=_engine, checkfirst=True)  # checkfirst=True prevents race condition when multiple Gunicorn workers start simultaneously
     log.info("Database initialised.")
 
 
