@@ -2,8 +2,13 @@
 app.py — Application factory.
 
 Local:    flask run  OR  python app.py
-Railway:  gunicorn app:app --workers 2 --threads 2 --worker-class gthread --timeout 120
+Railway:  gunicorn app:app --workers 1 --worker-class sync --timeout 120
 """
+# ── CRITICAL: psycopg2 MUST be imported before TensorFlow loads.
+# TensorFlow and psycopg2-binary both bundle OpenSSL. Whichever loads first
+# wins. If TensorFlow loads first, psycopg2 segfaults on connect.
+import psycopg2  # noqa: F401
+
 import os
 import logging
 import logging.config
