@@ -46,12 +46,16 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
-    DEBUG = True
+    DEBUG            = True
     WTF_CSRF_ENABLED = False
 
 
 class ProductionConfig(BaseConfig):
-    pass
+    # Ensure session cookies are sent only over HTTPS and are protected
+    # from cross-site requests — required for CSRF to work behind Railway's proxy
+    SESSION_COOKIE_SECURE   = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
 
 
 config = {
