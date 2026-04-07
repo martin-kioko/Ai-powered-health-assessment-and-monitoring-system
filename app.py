@@ -14,7 +14,7 @@ import logging
 import logging.config
 from datetime import timedelta
 from flask import Flask, render_template, redirect, url_for
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import config
 from extensions import limiter, csrf
@@ -57,6 +57,10 @@ def create_app(config_name: str | None = None) -> Flask:
                       else "production"
 
     app = Flask(__name__)
+
+    # ── Trust Railway's reverse-proxy headers (fixes CSRF & session cookies) ──
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     cfg = config[config_name]
     app.config.from_object(cfg)
     app.secret_key = cfg.SECRET_KEY
