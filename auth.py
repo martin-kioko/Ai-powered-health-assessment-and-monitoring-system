@@ -134,8 +134,19 @@ def _audit(db, user_id, action, details=""):
 
 def seed_defaults(admin_email, admin_password, doctor_email, doctor_password) -> None:
     with get_db() as db:
-        if db.query(User).filter(User.role == "admin").first():
+        admin = db.query(User).filter(User.role == "admin").first()
+        if admin:
+            admin.password_hash = hash_password(admin_password)
+            db.commit()
+            log.info("Admin password updated.")
             return
+
+        doctor = db.query(User).filter(User.role == "doctor").first()
+        if doctor:
+            doctor.password_hash = hash_password(doctor_password)
+            db.commit()
+            log.info("Doctor password updated.")
+
         db.add(User(
             name="System Administrator",
             email=admin_email,
