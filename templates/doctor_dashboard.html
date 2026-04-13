@@ -489,6 +489,7 @@
                 Submitting will mark this assessment as <em>reviewed</em>.
               </div>
               <form method="POST" action="{{ url_for('doctor.review', assessment_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <textarea
                   name="note"
                   placeholder="Enter observations, clinical findings, and recommended next steps…"
